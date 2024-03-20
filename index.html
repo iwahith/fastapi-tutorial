@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Chat Interface</title>
+</head>
+<body>
+    <h1>Upload PDF Document</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="file" id="file-input" name="file" accept=".pdf">
+        <button type="submit">Upload</button>
+    </form>
+
+    <hr>
+
+    <div id="chat-section">
+        <h1>PDF Chat Interface</h1>
+        <div id="chat-box" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; display: none;"></div>
+        <input type="text" id="user-input" placeholder="Type your query...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        document.getElementById("upload-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            var formData = new FormData();
+            var fileInput = document.getElementById("file-input");
+            formData.append("file", fileInput.files[0]);
+
+            fetch("http://localhost:8000/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                document.getElementById("upload-form").reset();
+                document.getElementById("upload-form").style.display = "none";
+                document.getElementById("chat-box").style.display = "block";  // Show chat interface
+            })
+            .catch(error => console.error("Error:", error));
+        });
+
+        var ws = new WebSocket("ws://localhost:8000/chat");
+        
+        ws.onopen = function(event) {
+            console.log("WebSocket connection established.");
+        };
+
+        ws.onmessage = function(event) {
+            var chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML += "<p><strong>You:</strong> " + event.data + "</p>";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        };
+
+        ws.onerror = function(event) {
+            console.error("WebSocket error observed:", event);
+        };
+
+        function sendMessage() {
+            var userInput = document.getElementById("user-input").value;
+            var chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML += "<p><strong>You:</strong> " + userInput + "</p>";
+            chatBox.scrollTop = chatBox.scrollHeight;
+            ws.send(userInput);
+            document.getElementById("user-input").value = "";
+        }
+    </script>
+</body>
+</html>
